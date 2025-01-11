@@ -1,7 +1,23 @@
-public class BORPack : IDisposable
+public struct fileInfoStruct
+{
+    public const int MAX_FILENAME_LEN = 256;
+    public uint pns_len;
+    public uint filestart;
+    public uint filesize;
+    //char[MAX_FILENAME_LEN] namebuf;
+    public string namebuf;
+
+    public fileInfoStruct(BinaryReader br)
+    {
+        pns_len = br.ReadUInt32();
+        filestart = br.ReadUInt32();
+        filesize = br.ReadUInt32();
+        namebuf = br.ReadCString(MAX_FILENAME_LEN);
+    }
+}
+public class BORPackExtractor : IDisposable
 {
     public const int MAX_BUFFER_LEN = 512;
-    public const int MAX_FILENAME_LEN = 256;
     public const int MAX_LABEL_LEN = 128;
 
     public const int PACKFILE_PATH_MAX = 512; // Maximum length of file path string.
@@ -10,22 +26,7 @@ public class BORPack : IDisposable
     MemoryStream ms;
     BinaryReader br;
 
-    public struct fileInfoStruct
-    {
-        public uint pns_len;
-        public uint filestart;
-        public uint filesize;
-        //char[MAX_FILENAME_LEN] namebuf;
-        public string namebuf;
 
-        public fileInfoStruct(BinaryReader br)
-        {
-            pns_len = br.ReadUInt32();
-            filestart = br.ReadUInt32();
-            filesize = br.ReadUInt32();
-            namebuf = br.ReadCString(MAX_FILENAME_LEN);
-        }
-    }
 
     public Dictionary<string, fileInfoStruct> files;
 
@@ -35,11 +36,11 @@ public class BORPack : IDisposable
         br.Dispose();
     }
 
-    public BORPack(string path)
+    public BORPackExtractor(FileInfo path)
     {
         Logging.Log("Reading {0}", path);
         ms = new();
-        var fs = File.OpenRead(path);
+        var fs = path.OpenRead();
         fs.CopyTo(ms);
         fs.Dispose();
         ms.Seek(0, SeekOrigin.Begin);
@@ -65,7 +66,14 @@ public class BORPack : IDisposable
             while (true)
             {
                 fileInfoStruct pname = new(br);
-                files.Add(pname.namebuf.ToLowerInvariant(), pname);
+                try
+                {
+                    files.Add(pname.namebuf.ToLowerInvariant(), pname);
+                }
+                catch (ArgumentException)
+                {
+                    Logging.Log(pname.namebuf.ToLowerInvariant());
+                }
             }
 
         }

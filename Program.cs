@@ -2,22 +2,39 @@
 {
     public static void Main(String[] Args)
     {
-        if (Args.Length < 1)
+        if (Args.Length < 2)
         {
             Console.WriteLine("Usage:\n"
-                    + $"./{System.AppDomain.CurrentDomain.FriendlyName} infile [outdir]");
+                    + "Extract"
+                    + $"./{System.AppDomain.CurrentDomain.FriendlyName} x infile [outdir]\n"
+                    + "Build"
+                    + $"./{System.AppDomain.CurrentDomain.FriendlyName} b indir [outfile]");
+
             return;
         }
-        string infile = Args[0];
-        string outdir = Args.Length > 1 ? Args[1] : "output";
-        try
+        if (Args[0] == "x")
         {
-            using BORPack pak = new(infile);
-            pak.Dump(outdir);
+            string infile = Args[1];
+            string outdir = Args.Length > 2 ? Args[2] : "output";
+            try
+            {
+                using BORPackExtractor pak = new(new FileInfo(infile));
+                pak.Dump(outdir);
+            }
+            catch (Exception e)
+            {
+                Logging.Error(e);
+            }
+            return;
         }
-        catch (Exception e)
+        else if (Args[0] == "b")
         {
-            Logging.Error(e);
+            DirectoryInfo indir = new DirectoryInfo(Args[1]);
+            FileInfo outfile = new FileInfo(Args.Length > 2 ? Args[2] : "bor.pak");
+            var pak = new BORPackBuilder(indir);
+            pak.BuildPak(outfile);
+            return;
         }
+
     }
 }
